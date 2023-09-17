@@ -16,11 +16,6 @@ public class Main {
         Stmt[] stmt = new Stmt[]{
                 //  if (n == 0) {
                 new IfStmt(
-//                        new IntEq(new Var("a"), new Int(0), "=="),
-//                        // return 1;
-//                        new Stmt[]{
-//                                new Return(new Int(1))
-//                        },
                         //list of condition blocks
                         List.of(
                                 new ConditionBlock(
@@ -174,7 +169,7 @@ public class Main {
         for (ConditionBlock conditionBlock : s.conditionBlocks) {
             genExpr(conditionBlock.condition, methodVisitor, args);
             Label label1 = new Label();
-            methodVisitor.visitJumpInsn(IFNE, label1);
+            methodVisitor.visitJumpInsn(IFEQ, label1);  // Change this line
             Label label2 = new Label();
             methodVisitor.visitLabel(label2);
             for (Stmt stmt : conditionBlock.stmts) {
@@ -193,8 +188,6 @@ public class Main {
             }
         }
     }
-
-
 
 
     private static void genFnCall(FuncCall s, MethodVisitor methodVisitor, Var[] args) {
