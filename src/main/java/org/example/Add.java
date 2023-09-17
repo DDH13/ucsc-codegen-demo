@@ -1,7 +1,5 @@
 package org.example;
 
-import java.util.List;
-
 public class Add {
     Stmt[] stmt = new Stmt[]{
             new Return(new IntOp(new IntOp(new Var("a"), new Var("b"), "+"), new Var("c"), "+"))
