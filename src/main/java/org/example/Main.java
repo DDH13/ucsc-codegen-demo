@@ -13,7 +13,47 @@ import static org.objectweb.asm.Opcodes.*;
 public class Main {
     public static void main(String[] args) {
 
-
+        Stmt[] stmt = new Stmt[]{
+                //  if (n == 0) {
+                new IfStmt(
+//                        new IntEq(new Var("a"), new Int(0), "=="),
+//                        // return 1;
+//                        new Stmt[]{
+//                                new Return(new Int(1))
+//                        },
+                        //list of condition blocks
+                        List.of(
+                                new ConditionBlock(
+                                        new IntEq(new Var("a"), new Int(0), "=="),
+                                        new Stmt[]{
+                                                new Return(new Int(1))
+                                        }
+                                ),
+                                new ConditionBlock(
+                                        new IntEq(new Var("a"), new Int(1), "=="),
+                                        new Stmt[]{
+                                                new Return(new Int(1))
+                                        }
+                                )
+                        ),
+                        // } else {
+                        new Stmt[]{
+                                // return n * factorial(n - 1);
+                                new Return(
+                                        new IntOp(
+                                                new Var("a"),
+                                                new FuncCall("factorial",
+                                                        new Expr[]{
+                                                                new IntOp(new Var("a"), new Int(1), "-")
+                                                        }),
+                                                "*"
+                                        )
+                                )
+                        }
+                        // }
+                ),
+        };
+        Func func = new Func("factorial", new Var[]{new Var("a")}, stmt);
         byte[] bytes = codeGen(func);
 
         try {
@@ -131,19 +171,23 @@ public class Main {
     }
 
     private static void genIf(IfStmt s, MethodVisitor methodVisitor, Var[] args) {
-        genExpr(s.cond, methodVisitor, args);
-        Label label1 = new Label();
-        methodVisitor.visitJumpInsn(IFNE, label1);
-        Label label2 = new Label();
-        methodVisitor.visitLabel(label2);
-        for (Stmt stmt : s.elseStmts) {
-            if (stmt instanceof Return) {
-                genReturn((Return) stmt, methodVisitor, args);
+        for (ConditionBlock conditionBlock : s.conditionBlocks) {
+            genExpr(conditionBlock.condition, methodVisitor, args);
+            Label label1 = new Label();
+            methodVisitor.visitJumpInsn(IFNE, label1);
+            Label label2 = new Label();
+            methodVisitor.visitLabel(label2);
+            for (Stmt stmt : conditionBlock.stmts) {
+                if (stmt instanceof Return) {
+                    genReturn((Return) stmt, methodVisitor, args);
+                }
             }
+            methodVisitor.visitLabel(label1);
+            methodVisitor.visitFrame(Opcodes.F_SAME, 0, null, 0, null);
         }
-        methodVisitor.visitLabel(label1);
+        methodVisitor.visitLabel(new Label());
         methodVisitor.visitFrame(Opcodes.F_SAME, 0, null, 0, null);
-        for (Stmt stmt : s.stmts) {
+        for (Stmt stmt : s.elseStmts) {
             if (stmt instanceof Return) {
                 genReturn((Return) stmt, methodVisitor, args);
             }
@@ -173,6 +217,7 @@ public class Main {
                 "I".repeat(Math.max(0, length)) +
                 ")I";
     }
+
 //    class Temp{
 //        public static void Main(String[] args) {
 //            int n = Integer.parseInt(args[0]);
@@ -189,7 +234,6 @@ public class Main {
 //                return fib(n - 1) + fib(n - 2);
 //            }
 //        }
-//
 //    }
 
 }

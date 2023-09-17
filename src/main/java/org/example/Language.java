@@ -38,17 +38,24 @@ class FuncCall extends Expr {
 }
 
 class IfStmt extends Stmt {
-    Expr cond;
-    Stmt[] stmts;
-    Stmt[] elseStmts;
+    List<ConditionBlock> conditionBlocks;
+    Stmt[] elseStmts; // Default else statements
 
-    public IfStmt(Expr cond, Stmt[] stmts, Stmt[] elseStmts) {
-        this.cond = cond;
-        this.stmts = stmts;
+    public IfStmt(List<ConditionBlock> conditionBlocks, Stmt[] elseStmts) {
+        this.conditionBlocks = conditionBlocks;
         this.elseStmts = elseStmts;
     }
 }
 
+class ConditionBlock {
+    Expr condition;
+    Stmt[] stmts;
+
+    public ConditionBlock(Expr condition, Stmt[] stmts) {
+        this.condition = condition;
+        this.stmts = stmts;
+    }
+}
 
 class Return extends Stmt {
     Expr expr;
