@@ -13,6 +13,44 @@ import static org.objectweb.asm.Opcodes.*;
 public class Main {
     public static void main(String[] args) {
 
+//        Stmt[] stmt = new Stmt[]{
+//                //  if (n == 0) {
+//                new IfStmt(
+//                        //list of condition blocks
+//                        List.of(
+//                                new ConditionBlock(
+//                                        new IntEq(new Var("a"), new Int(0), "=="),
+//                                        new Stmt[]{
+//                                                new Return(new Int(1))
+//                                        }
+//                                ),
+//                                new ConditionBlock(
+//                                        new IntEq(new Var("a"), new Int(1), "=="),
+//                                        new Stmt[]{
+//                                                new Return(new Int(1))
+//                                        }
+//                                )
+//                        ),
+//                        // } else {
+//                        new Stmt[]{
+//                                // return n * factorial(n - 1);
+//                                new Return(
+//                                        new IntOp(
+//                                                new Var("a"),
+//                                                new FuncCall("factorial",
+//                                                        new Expr[]{
+//                                                                new IntOp(new Var("a"), new Int(1), "-")
+//                                                        }),
+//                                                "*"
+//                                        )
+//                                )
+//                        }
+//                        // }
+//                ),
+//        };
+//        Func func = new Func("factorial", new Var[]{new Var("a")}, stmt);
+
+        //fibonacci
         Stmt[] stmt = new Stmt[]{
                 //  if (n == 0) {
                 new IfStmt(
@@ -21,7 +59,7 @@ public class Main {
                                 new ConditionBlock(
                                         new IntEq(new Var("a"), new Int(0), "=="),
                                         new Stmt[]{
-                                                new Return(new Int(1))
+                                                new Return(new Int(0))
                                         }
                                 ),
                                 new ConditionBlock(
@@ -36,19 +74,22 @@ public class Main {
                                 // return n * factorial(n - 1);
                                 new Return(
                                         new IntOp(
-                                                new Var("a"),
-                                                new FuncCall("factorial",
+                                                new FuncCall("fib",
                                                         new Expr[]{
                                                                 new IntOp(new Var("a"), new Int(1), "-")
                                                         }),
-                                                "*"
+                                                new FuncCall("fib",
+                                                        new Expr[]{
+                                                                new IntOp(new Var("a"), new Int(2), "-")
+                                                        }),
+                                                "+"
                                         )
                                 )
                         }
                         // }
                 ),
         };
-        Func func = new Func("factorial", new Var[]{new Var("a")}, stmt);
+        Func func = new Func("fib", new Var[]{new Var("a")}, stmt);
         byte[] bytes = codeGen(func);
 
         try {
