@@ -13,7 +13,7 @@ public class Main {
     public static void main(String[] args) {
 
         //list of functions
-        Func[] funcs = new Func[]{new Fibonacci().func, new Factorial().func, new Gcd().func, new Add().func};
+        Func[] funcs = new Func[]{new Fibonacci().func, new Factorial().func, new Gcd().func, new Add().func, new RecursiveSum().func};
 
         for (Func func : funcs) {
             byte[] bytes = codeGen(func);
