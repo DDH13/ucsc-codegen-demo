@@ -1,12 +1,9 @@
 package org.example;
 
-import org.objectweb.asm.AnnotationVisitor;
-import org.objectweb.asm.ClassWriter;
-import org.objectweb.asm.FieldVisitor;
-import org.objectweb.asm.MethodVisitor;
-import org.objectweb.asm.RecordComponentVisitor;
+import org.objectweb.asm.*;
 
 import java.io.FileOutputStream;
+import java.util.List;
 
 import static org.objectweb.asm.ClassWriter.COMPUTE_MAXS;
 import static org.objectweb.asm.Opcodes.*;
@@ -15,10 +12,7 @@ import static org.objectweb.asm.Opcodes.*;
 
 public class Main {
     public static void main(String[] args) {
-        Stmt[] stmt = new Stmt[]{
-                new Return(new IntOp(new IntOp(new Var("a"), new Var("b"), "+"), new Var("c"), "+"))
-        };
-        Func func = new Func("add", new Var[]{new Var("a"), new Var("b"), new Var("c")}, stmt);
+
 
         byte[] bytes = codeGen(func);
 
@@ -78,17 +72,20 @@ public class Main {
     }
 
     private static void genFunc(Func func, ClassWriter classWriter) {
-        MethodVisitor methodVisitor;
-        methodVisitor = classWriter.visitMethod(ACC_PUBLIC | ACC_STATIC, func.name, genSig(func.args.length), null, null);
+        MethodVisitor methodVisitor = classWriter.visitMethod(ACC_PUBLIC | ACC_STATIC, func.name, genSig(func.args.length), null, null);
         methodVisitor.visitCode();
         for (Stmt s : func.stmts) {
             if (s instanceof Return) {
                 genReturn((Return) s, methodVisitor, func.args);
+            } else if (s instanceof IfStmt) {
+                genIf((IfStmt) s, methodVisitor, func.args);
             }
         }
-        methodVisitor.visitMaxs(0,0);
+
+        methodVisitor.visitMaxs(0, 0); // You might need to calculate max stack and locals
         methodVisitor.visitEnd();
     }
+
 
     private static void genReturn(Return s, MethodVisitor methodVisitor, Var[] args) {
         genExpr(s.expr, methodVisitor, args);
@@ -99,16 +96,69 @@ public class Main {
         if (expr instanceof IntOp) {
             genExpr(((IntOp) expr).left, methodVisitor, args);
             genExpr(((IntOp) expr).right, methodVisitor, args);
-            if (((IntOp) expr).op.equals("+")) {
-                methodVisitor.visitInsn(IADD);
-            } else if (((IntOp) expr).op.equals("-")) {
-                methodVisitor.visitInsn(ISUB);
+            switch (((IntOp) expr).op) {
+                case "+" -> methodVisitor.visitInsn(IADD);
+                case "-" -> methodVisitor.visitInsn(ISUB);
+                case "*" -> methodVisitor.visitInsn(IMUL);
             }
-        } else if (expr instanceof Var) {
+        } else if (expr instanceof Int) {
+            methodVisitor.visitIntInsn(BIPUSH, ((Int) expr).value);
+        }
+        else if (expr instanceof Var) {
             methodVisitor.visitVarInsn(ILOAD, getIndex((Var) expr, args));
+        }
+        else if (expr instanceof IntEq){
+            genExpr(((IntEq) expr).left, methodVisitor, args);
+            genExpr(((IntEq) expr).right, methodVisitor, args);
+            Label label1 = new Label();
+            Label label2 = new Label();
+            if (((IntEq) expr).op.equals("==")) {
+                methodVisitor.visitJumpInsn(IF_ICMPEQ, label1);
+            } else if (((IntEq) expr).op.equals("!=")) {
+                methodVisitor.visitJumpInsn(IF_ICMPNE, label1);
+            }
+            methodVisitor.visitInsn(ICONST_0);
+            methodVisitor.visitJumpInsn(GOTO, label2);
+            methodVisitor.visitLabel(label1);
+            methodVisitor.visitFrame(Opcodes.F_SAME, 0, null, 0, null);
+            methodVisitor.visitInsn(ICONST_1);
+            methodVisitor.visitLabel(label2);
+            methodVisitor.visitFrame(Opcodes.F_SAME1, 0, null, 1, new Object[]{Opcodes.INTEGER});
+        }
+        else if (expr instanceof FuncCall) {
+            genFnCall((FuncCall) expr, methodVisitor, args);
         }
     }
 
+    private static void genIf(IfStmt s, MethodVisitor methodVisitor, Var[] args) {
+        genExpr(s.cond, methodVisitor, args);
+        Label label1 = new Label();
+        methodVisitor.visitJumpInsn(IFNE, label1);
+        Label label2 = new Label();
+        methodVisitor.visitLabel(label2);
+        for (Stmt stmt : s.elseStmts) {
+            if (stmt instanceof Return) {
+                genReturn((Return) stmt, methodVisitor, args);
+            }
+        }
+        methodVisitor.visitLabel(label1);
+        methodVisitor.visitFrame(Opcodes.F_SAME, 0, null, 0, null);
+        for (Stmt stmt : s.stmts) {
+            if (stmt instanceof Return) {
+                genReturn((Return) stmt, methodVisitor, args);
+            }
+        }
+    }
+
+
+
+
+    private static void genFnCall(FuncCall s, MethodVisitor methodVisitor, Var[] args) {
+        for (Expr expr : s.args) {
+            genExpr(expr, methodVisitor, args);
+        }
+        methodVisitor.visitMethodInsn(INVOKESTATIC, s.name, s.name, genSig(s.args.length), false);
+    }
     private static int getIndex(Var v, Var[] args) {
         for (int i = 0; i < args.length; i++) {
             if (args[i].name.equals((v).name)) {
@@ -119,13 +169,27 @@ public class Main {
     }
 
     private static String genSig(int length) {
-        StringBuilder sb = new StringBuilder();
-        sb.append("(");
-        for (int i = 0; i < length; i++) {
-            sb.append("I");
-        }
-        sb.append(")I");
-        return sb.toString();
+        return "(" +
+                "I".repeat(Math.max(0, length)) +
+                ")I";
     }
+//    class Temp{
+//        public static void Main(String[] args) {
+//            int n = Integer.parseInt(args[0]);
+//            System.out.println(fib(n));
+//        }
+//        static int fib(int n) {
+//            if (n == 0) {
+//                return 0;
+//            }
+//            else if (n == 1) {
+//                return 1;
+//            }
+//            else {
+//                return fib(n - 1) + fib(n - 2);
+//            }
+//        }
+//
+//    }
 
 }
