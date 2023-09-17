@@ -9,96 +9,24 @@ import static org.objectweb.asm.ClassWriter.COMPUTE_MAXS;
 import static org.objectweb.asm.Opcodes.*;
 
 
-
 public class Main {
     public static void main(String[] args) {
 
-//        Stmt[] stmt = new Stmt[]{
-//                //  if (n == 0) {
-//                new IfStmt(
-//                        //list of condition blocks
-//                        List.of(
-//                                new ConditionBlock(
-//                                        new IntEq(new Var("a"), new Int(0), "=="),
-//                                        new Stmt[]{
-//                                                new Return(new Int(1))
-//                                        }
-//                                ),
-//                                new ConditionBlock(
-//                                        new IntEq(new Var("a"), new Int(1), "=="),
-//                                        new Stmt[]{
-//                                                new Return(new Int(1))
-//                                        }
-//                                )
-//                        ),
-//                        // } else {
-//                        new Stmt[]{
-//                                // return n * factorial(n - 1);
-//                                new Return(
-//                                        new IntOp(
-//                                                new Var("a"),
-//                                                new FuncCall("factorial",
-//                                                        new Expr[]{
-//                                                                new IntOp(new Var("a"), new Int(1), "-")
-//                                                        }),
-//                                                "*"
-//                                        )
-//                                )
-//                        }
-//                        // }
-//                ),
-//        };
-//        Func func = new Func("factorial", new Var[]{new Var("a")}, stmt);
+        //list of functions
+        Func[] funcs = new Func[]{new Fibonacci().func, new Factorial().func};
 
-        //fibonacci
-        Stmt[] stmt = new Stmt[]{
-                //  if (n == 0) {
-                new IfStmt(
-                        //list of condition blocks
-                        List.of(
-                                new ConditionBlock(
-                                        new IntEq(new Var("a"), new Int(0), "=="),
-                                        new Stmt[]{
-                                                new Return(new Int(0))
-                                        }
-                                ),
-                                new ConditionBlock(
-                                        new IntEq(new Var("a"), new Int(1), "=="),
-                                        new Stmt[]{
-                                                new Return(new Int(1))
-                                        }
-                                )
-                        ),
-                        // } else {
-                        new Stmt[]{
-                                // return n * factorial(n - 1);
-                                new Return(
-                                        new IntOp(
-                                                new FuncCall("fib",
-                                                        new Expr[]{
-                                                                new IntOp(new Var("a"), new Int(1), "-")
-                                                        }),
-                                                new FuncCall("fib",
-                                                        new Expr[]{
-                                                                new IntOp(new Var("a"), new Int(2), "-")
-                                                        }),
-                                                "+"
-                                        )
-                                )
-                        }
-                        // }
-                ),
-        };
-        Func func = new Func("fib", new Var[]{new Var("a")}, stmt);
-        byte[] bytes = codeGen(func);
+        for (Func func : funcs) {
+            byte[] bytes = codeGen(func);
 
-        try {
-            FileOutputStream fos = new FileOutputStream(func.name + ".class");
-            fos.write(bytes);
-            fos.close();
-        } catch (Exception e) {
-            e.printStackTrace();
+            try {
+                FileOutputStream fos = new FileOutputStream(func.name + ".class");
+                fos.write(bytes);
+                fos.close();
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
         }
+
 
     }
 
@@ -125,11 +53,11 @@ public class Main {
     private static void genFixedMain(Func func, ClassWriter classWriter) {
         MethodVisitor methodVisitor = classWriter.visitMethod(ACC_PUBLIC | ACC_STATIC, "main", "([Ljava/lang/String;)V", null, null);
         methodVisitor.visitCode();
-        for (int i = 0; i < func.args.length ; i++) {
+        for (int i = 0; i < func.args.length; i++) {
             parseArg(methodVisitor, i, i + 1);
         }
         methodVisitor.visitFieldInsn(GETSTATIC, "java/lang/System", "out", "Ljava/io/PrintStream;");
-        for (int i = 0; i < func.args.length ; i++) {
+        for (int i = 0; i < func.args.length; i++) {
             methodVisitor.visitVarInsn(ILOAD, i + 1);
         }
         methodVisitor.visitMethodInsn(INVOKESTATIC, func.name, func.name, genSig(func.args.length), false);
@@ -179,11 +107,9 @@ public class Main {
             }
         } else if (expr instanceof Int) {
             methodVisitor.visitIntInsn(BIPUSH, ((Int) expr).value);
-        }
-        else if (expr instanceof Var) {
+        } else if (expr instanceof Var) {
             methodVisitor.visitVarInsn(ILOAD, getIndex((Var) expr, args));
-        }
-        else if (expr instanceof IntEq){
+        } else if (expr instanceof IntEq) {
             genExpr(((IntEq) expr).left, methodVisitor, args);
             genExpr(((IntEq) expr).right, methodVisitor, args);
             Label label1 = new Label();
@@ -200,8 +126,7 @@ public class Main {
             methodVisitor.visitInsn(ICONST_1);
             methodVisitor.visitLabel(label2);
             methodVisitor.visitFrame(Opcodes.F_SAME1, 0, null, 1, new Object[]{Opcodes.INTEGER});
-        }
-        else if (expr instanceof FuncCall) {
+        } else if (expr instanceof FuncCall) {
             genFnCall((FuncCall) expr, methodVisitor, args);
         }
     }
@@ -237,6 +162,7 @@ public class Main {
         }
         methodVisitor.visitMethodInsn(INVOKESTATIC, s.name, s.name, genSig(s.args.length), false);
     }
+
     private static int getIndex(Var v, Var[] args) {
         for (int i = 0; i < args.length; i++) {
             if (args[i].name.equals((v).name)) {
@@ -247,27 +173,8 @@ public class Main {
     }
 
     private static String genSig(int length) {
-        return "(" +
-                "I".repeat(Math.max(0, length)) +
-                ")I";
+        return "(" + "I".repeat(Math.max(0, length)) + ")I";
     }
 
-//    class Temp{
-//        public static void Main(String[] args) {
-//            int n = Integer.parseInt(args[0]);
-//            System.out.println(fib(n));
-//        }
-//        static int fib(int n) {
-//            if (n == 0) {
-//                return 0;
-//            }
-//            else if (n == 1) {
-//                return 1;
-//            }
-//            else {
-//                return fib(n - 1) + fib(n - 2);
-//            }
-//        }
-//    }
 
 }
