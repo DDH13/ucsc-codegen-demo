@@ -13,7 +13,7 @@ public class Main {
     public static void main(String[] args) {
 
         //list of functions
-        Func[] funcs = new Func[]{new Fibonacci().func, new Factorial().func};
+        Func[] funcs = new Func[]{new Fibonacci().func, new Factorial().func, new Gcd().func};
 
         for (Func func : funcs) {
             byte[] bytes = codeGen(func);
@@ -26,8 +26,6 @@ public class Main {
                 e.printStackTrace();
             }
         }
-
-
     }
 
     private static byte[] codeGen(Func func) {
@@ -104,6 +102,7 @@ public class Main {
                 case "+" -> methodVisitor.visitInsn(IADD);
                 case "-" -> methodVisitor.visitInsn(ISUB);
                 case "*" -> methodVisitor.visitInsn(IMUL);
+                case "%" -> methodVisitor.visitInsn(IREM);
             }
         } else if (expr instanceof Int) {
             methodVisitor.visitIntInsn(BIPUSH, ((Int) expr).value);
